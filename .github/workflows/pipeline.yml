@@ -1,0 +1,52 @@
+name: 🤖 Viral Video Bot (YouTube Shorts)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 11 * * *'
+
+jobs:
+  generate-video:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python Setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Instalar dependências
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+          pip install -r requirements.txt
+
+      - name: 🔍 1. Tendências + Roteiro
+        run: python scripts/01_trends_and_script.py
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+      - name: 🎙️ 2. Renderizar Vídeo
+        run: python scripts/02_render.py
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+
+      - name: 📤 3. Upload YouTube (Privado)
+        run: python scripts/03_upload_yt.py
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+
+      - name: 💾 Backup do vídeo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-resultado
+          path: |
+            final.mp4
+            script.json
+            run.log
+          retention-days: 7
